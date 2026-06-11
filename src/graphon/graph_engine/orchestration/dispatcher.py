@@ -34,6 +34,7 @@ class _DispatcherLifecycle:
     execution_coordinator: ExecutionCoordinator
     stop_event: threading.Event
     event_emitter: EventManager | None = None
+    poll_started_at: float = 0.0
 
     _COMMAND_TRIGGER_EVENTS = (
         NodeRunSucceededEvent,
@@ -53,8 +54,11 @@ class _DispatcherLifecycle:
             self._mark_complete()
 
     def _run_until_exit(self) -> _DispatcherLoopOutcome:
+        self.poll_started_at = time.monotonic()
         self._process_commands()
         while not self.stop_event.is_set():
+            self._notify_dispatcher_poll()
+            self._process_commands()
             if self._execution_finished:
                 return _DispatcherLoopOutcome()
             if self.execution_coordinator.paused:
@@ -76,6 +80,7 @@ class _DispatcherLifecycle:
         try:
             event = self.event_queue.get(timeout=0.1)
         except queue.Empty:
+            self._notify_dispatcher_poll()
             self._process_commands()
             time.sleep(0.1)
             return
@@ -83,6 +88,16 @@ class _DispatcherLifecycle:
         self.event_handler.dispatch(event)
         self.event_queue.task_done()
         self._process_commands(event)
+
+    def _notify_dispatcher_poll(self) -> None:
+        if self.event_emitter is None:
+            return
+
+        now = time.monotonic()
+        self.event_emitter.notify_dispatcher_poll(
+            now=now,
+            elapsed=now - self.poll_started_at,
+        )
 
     def _drain_after_exit(self, outcome: _DispatcherLoopOutcome) -> None:
         self._process_commands()
