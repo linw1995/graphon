@@ -14,6 +14,7 @@ from pydantic_core import to_jsonable_python
 
 from graphon.enums import NodeExecutionType, NodeState, NodeType
 from graphon.model_runtime.entities.llm_entities import LLMUsage
+from graphon.runtime.cancellation import CancellationToken
 from graphon.runtime.ready_queue import ReadyQueueProtocol
 from graphon.runtime.variable_pool import VariablePool
 
@@ -516,6 +517,7 @@ class GraphRuntimeState:  # noqa: PLR0904
     _execution_data: _GraphRuntimeExecutionData
     _bindings: _GraphRuntimeBindings
     _suspension_state: _GraphRuntimeSuspensionState
+    _cancellation_token: CancellationToken
 
     def __init__(
         self,
@@ -530,6 +532,7 @@ class GraphRuntimeState:  # noqa: PLR0904
         graph_execution: GraphExecutionProtocol | None = None,
         graph: GraphProtocol | Graph | None = None,
         execution_context: AbstractContextManager[object] | None = None,
+        cancellation_token: CancellationToken | None = None,
     ) -> None:
         self._execution_data = _GraphRuntimeExecutionData(
             variable_pool=variable_pool,
@@ -539,6 +542,7 @@ class GraphRuntimeState:  # noqa: PLR0904
             outputs=outputs or {},
             node_run_steps=node_run_steps,
         )
+        self._cancellation_token = cancellation_token or CancellationToken()
         self._suspension_state = _GraphRuntimeSuspensionState()
         self._bindings = _GraphRuntimeBindings(
             runtime_state=self,
@@ -564,6 +568,10 @@ class GraphRuntimeState:  # noqa: PLR0904
     @property
     def execution_context(self) -> AbstractContextManager[object]:
         return self._bindings.execution_context
+
+    @property
+    def cancellation_token(self) -> CancellationToken:
+        return self._cancellation_token
 
     @execution_context.setter
     def execution_context(
@@ -670,6 +678,27 @@ class GraphRuntimeState:  # noqa: PLR0904
             graph_init_params=graph_init_params,
             root_node_id=root_node_id,
             variable_pool=variable_pool,
+        )
+
+    def create_child_runtime_state(
+        self,
+        *,
+        variable_pool: VariablePool | None = None,
+        start_at: float,
+        execution_context: AbstractContextManager[object] | None = None,
+    ) -> GraphRuntimeState:
+        child_variable_pool = (
+            variable_pool if variable_pool is not None else self.variable_pool
+        )
+        return GraphRuntimeState(
+            variable_pool=child_variable_pool,
+            start_at=start_at,
+            execution_context=(
+                execution_context
+                if execution_context is not None
+                else self.execution_context
+            ),
+            cancellation_token=self._cancellation_token,
         )
 
     def dumps(self) -> str:

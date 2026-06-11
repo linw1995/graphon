@@ -1,3 +1,4 @@
+from .cancellation import CancellationError, CancellationToken
 from .graph_runtime_state import (
     ChildEngineBuilderNotConfiguredError,
     ChildEngineError,
@@ -15,6 +16,8 @@ from .read_only_wrappers import (
 from .variable_pool import VariablePool, VariableValue
 
 __all__ = [
+    "CancellationError",
+    "CancellationToken",
     "ChildEngineBuilderNotConfiguredError",
     "ChildEngineError",
     "ChildGraphNotFoundError",
