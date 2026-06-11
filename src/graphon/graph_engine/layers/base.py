@@ -91,6 +91,21 @@ class GraphEngineLayer(ABC):
 
         """
 
+    def on_dispatcher_poll(self, now: float, elapsed: float) -> None:
+        """Called periodically by the dispatcher while execution is active.
+
+        This hook is internal to the engine lifecycle and is not emitted as a
+        graph event. Layers can use it for time-based checks that must not
+        depend on node events.
+
+        Args:
+            now: Current monotonic clock value.
+            elapsed: Seconds elapsed since dispatcher polling started.
+
+        """
+        _ = now
+        _ = elapsed
+
     @abstractmethod
     def on_graph_end(self, error: Exception | None) -> None:
         """Called when graph execution ends.

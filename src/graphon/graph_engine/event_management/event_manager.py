@@ -100,6 +100,17 @@ class EventManager:
         """Notify registered layers about an event without buffering it."""
         self._notify_layers(event)
 
+    def notify_dispatcher_poll(self, now: float, elapsed: float) -> None:
+        """Notify registered layers about an internal dispatcher poll."""
+        for layer in self._layers:
+            try:
+                layer.on_dispatcher_poll(now=now, elapsed=elapsed)
+            except Exception:
+                _logger.exception(
+                    "Error in layer on_dispatcher_poll, layer_type=%s",
+                    type(layer),
+                )
+
     def collect(self, event: GraphEngineEvent) -> None:
         """Thread-safe method to collect an event.
 
