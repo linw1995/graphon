@@ -186,7 +186,9 @@ class GraphEngine:
         )
 
         # Register command handlers
-        abort_handler = AbortCommandHandler()
+        abort_handler = AbortCommandHandler(
+            self._graph_runtime_state.cancellation_token,
+        )
         self._command_processor.register_handler(AbortCommand, abort_handler)
 
         pause_handler = PauseCommandHandler()
