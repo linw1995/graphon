@@ -96,6 +96,17 @@ class ExecutionLimitsLayer(GraphEngineLayer):
                 pass
 
     @override
+    def on_dispatcher_poll(self, now: float, elapsed: float) -> None:
+        """Check elapsed execution time without relying on node events."""
+        _ = now
+        _ = elapsed
+        if not self._execution_started or self._execution_ended or self._abort_sent:
+            return
+
+        if self._reached_time_limitation():
+            self._send_abort_command(LimitType.TIME_LIMIT)
+
+    @override
     def on_graph_end(self, error: Exception | None) -> None:
         """Called when graph execution ends."""
         if self._execution_started and not self._execution_ended:
